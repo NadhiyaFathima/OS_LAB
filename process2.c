@@ -14,7 +14,7 @@ int main(){
     struct data*d;
     shmid=shmget(SHMKEY,sizeof(struct data),IPC_CREAT|0666);
     d=(struct data*)shmat(shmid,NULL,0);
-    sprintf(d->result, "%s%s%s", d->s1, d->s2, d->s3);
+    sprintf(d->result, "%s %s %s", d->s1, d->s2, d->s3);
     printf("Concatenation done. Result: %s\n", d->result);
     shmdt(d);
     return 0;
