@@ -8,11 +8,6 @@ struct Process {
     int completed;
 };
 
-void FCFS(struct Process p[], int n);
-void SRTF(struct Process p[], int n);
-void PriorityNP(struct Process p[], int n);
-void RoundRobin(struct Process p[], int n, int q);
-
 float avgWaiting(struct Process p[], int n) {
     float sum = 0;
     for(int i=0;i<n;i++)
@@ -27,6 +22,12 @@ void reset(struct Process p[], struct Process copy[], int n) {
         p[i].completed = 0;
     }
 }
+
+/* ✅ Function Declarations */
+void FCFS(struct Process p[], int n);
+void SRTF(struct Process p[], int n);
+void PriorityNP(struct Process p[], int n);
+void RoundRobin(struct Process p[], int n, int q);
 
 int main() {
     int n, choice;
@@ -51,21 +52,18 @@ int main() {
         copy[i] = p[i];
     }
 
-    float fcfsAvg, srtfAvg, prAvg, rrAvg;
-
     while(1) {
         printf("\n\n--- CPU Scheduling Menu ---\n");
         printf("1. FCFS\n");
         printf("2. SRTF\n");
         printf("3. Non-preemptive Priority\n");
         printf("4. Round Robin (q=3)\n");
-        printf("5. Compare All\n");
-        printf("6. Exit\n");
+        printf("5. Exit\n");
 
         printf("Enter choice: ");
         scanf("%d",&choice);
 
-        if(choice==6) break;
+        if(choice==5) break;
 
         switch(choice) {
 
@@ -93,43 +91,115 @@ int main() {
                 printf("Average WT = %.2f\n", avgWaiting(p,n));
                 break;
 
-            case 5:
-                reset(p,copy,n);
-                FCFS(p,n);
-                fcfsAvg = avgWaiting(p,n);
-
-                reset(p,copy,n);
-                SRTF(p,n);
-                srtfAvg = avgWaiting(p,n);
-
-                reset(p,copy,n);
-                PriorityNP(p,n);
-                prAvg = avgWaiting(p,n);
-
-                reset(p,copy,n);
-                RoundRobin(p,n,3);
-                rrAvg = avgWaiting(p,n);
-
-                printf("\n--- Average Waiting Times ---\n");
-                printf("FCFS      = %.2f\n",fcfsAvg);
-                printf("SRTF      = %.2f\n",srtfAvg);
-                printf("Priority  = %.2f\n",prAvg);
-                printf("RR (q=3)  = %.2f\n",rrAvg);
-
-                float min = fcfsAvg;
-                char best[20] = "FCFS";
-
-                if(srtfAvg < min) { min=srtfAvg; sprintf(best,"SRTF"); }
-                if(prAvg < min)   { min=prAvg; sprintf(best,"Priority"); }
-                if(rrAvg < min)   { min=rrAvg; sprintf(best,"Round Robin"); }
-
-                printf("\n✅ Best Algorithm = %s (Min Avg WT = %.2f)\n",best,min);
-                break;
-
             default:
                 printf("Invalid choice!\n");
         }
     }
 
     return 0;
+}
+
+/* ========================================================= */
+/* ✅ FCFS Scheduling */
+void FCFS(struct Process p[], int n) {
+    int time = 0;
+
+    for(int i=0;i<n;i++) {
+        if(time < p[i].at)
+            time = p[i].at;
+
+        time += p[i].bt;
+        p[i].ct = time;
+
+        p[i].tat = p[i].ct - p[i].at;
+        p[i].wt  = p[i].tat - p[i].bt;
+    }
+}
+
+/* ✅ SRTF Scheduling */
+void SRTF(struct Process p[], int n) {
+    int time=0, done=0;
+
+    while(done < n) {
+        int idx=-1, min=9999;
+
+        for(int i=0;i<n;i++) {
+            if(p[i].at <= time && p[i].remaining > 0) {
+                if(p[i].remaining < min) {
+                    min = p[i].remaining;
+                    idx = i;
+                }
+            }
+        }
+
+        if(idx==-1) { time++; continue; }
+
+        p[idx].remaining--;
+        time++;
+
+        if(p[idx].remaining==0) {
+            p[idx].ct = time;
+            p[idx].tat = p[idx].ct - p[idx].at;
+            p[idx].wt = p[idx].tat - p[idx].bt;
+            done++;
+        }
+    }
+}
+
+/* ✅ Priority Non-preemptive */
+void PriorityNP(struct Process p[], int n) {
+    int time=0, done=0;
+
+    while(done < n) {
+        int idx=-1, high=-1;
+
+        for(int i=0;i<n;i++) {
+            if(p[i].at <= time && p[i].completed==0) {
+                if(p[i].pr > high) {
+                    high = p[i].pr;
+                    idx = i;
+                }
+            }
+        }
+
+        if(idx==-1) { time++; continue; }
+
+        time += p[idx].bt;
+        p[idx].ct = time;
+
+        p[idx].tat = p[idx].ct - p[idx].at;
+        p[idx].wt = p[idx].tat - p[idx].bt;
+
+        p[idx].completed=1;
+        done++;
+    }
+}
+
+/* ✅ Round Robin Scheduling */
+void RoundRobin(struct Process p[], int n, int q) {
+    int time=0, done=0;
+
+    while(done < n) {
+        int executed=0;
+
+        for(int i=0;i<n;i++) {
+            if(p[i].at <= time && p[i].remaining > 0) {
+
+                executed=1;
+                int slice = (p[i].remaining > q) ? q : p[i].remaining;
+
+                p[i].remaining -= slice;
+                time += slice;
+
+                if(p[i].remaining==0) {
+                    p[i].ct = time;
+                    p[i].tat = p[i].ct - p[i].at;
+                    p[i].wt = p[i].tat - p[i].bt;
+                    done++;
+                }
+            }
+        }
+
+        if(!executed) time++;
+    }
 }
